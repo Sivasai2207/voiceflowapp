@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>CFBundleDevelopmentRegion</key>
+    <string>en</string>
+    <key>CFBundleDisplayName</key>
+    <string>VoiceFlow</string>
+    <key>CFBundleExecutable</key>
+    <string>VoiceFlowApp</string>
+    <key>CFBundleIdentifier</key>
+    <string>com.voiceflow.app</string>
+    <key>CFBundleInfoDictionaryVersion</key>
+    <string>6.0</string>
+    <key>CFBundleName</key>
+    <string>VoiceFlow</string>
+    <key>CFBundlePackageType</key>
+    <string>APPL</string>
+    <key>CFBundleShortVersionString</key>
+    <string>1.0.0</string>
+    <key>CFBundleVersion</key>
+    <string>1</string>
+    <key>LSMinimumSystemVersion</key>
+    <string>14.0</string>
+    <key>LSUIElement</key>
+    <true/>
+    <key>NSHumanReadableCopyright</key>
+    <string>Copyright © 2025 VoiceFlow. All rights reserved.</string>
+    <key>NSMicrophoneUsageDescription</key>
+    <string>VoiceFlow needs microphone access for push-to-talk dictation</string>
+    <key>NSSpeechRecognitionUsageDescription</key>
+    <string>VoiceFlow needs speech recognition access to transcribe your dictation on your Mac</string>
+    <key>NSAccessibilityUsageDescription</key>
+    <string>VoiceFlow needs accessibility access to insert text at your cursor in any app</string>
+    <key>NSAppleEventsUsageDescription</key>
+    <string>VoiceFlow needs access to interact with other apps for text insertion</string>
+    <key>CFBundleIconFile</key>
+    <string>AppIcon</string>
+    <key>CFBundleIconName</key>
+    <string>AppIcon</string>
+    <key>CFBundleDocumentTypes</key>
+    <array/>
+    <key>UTExportedTypeDeclarations</key>
+    <array/>
+    <key>UTImportedTypeDeclarations</key>
+    <array/>
+</dict>
+</plist>
