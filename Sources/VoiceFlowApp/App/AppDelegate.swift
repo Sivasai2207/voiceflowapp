@@ -38,8 +38,47 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         if !mic || !ax {
             showSettings()
         }
-        
+
+        // First launch: offer to download the local speech model right away.
+        promptForModelDownloadIfNeeded()
+
         print("✅ VoiceFlowApp: applicationDidFinishLaunching COMPLETE")
+    }
+
+    private static let promptedModelDownloadKey = "VoiceFlowApp.hasPromptedParakeetDownload"
+
+    /// On first launch (or until the model is present), guide the user straight to
+    /// the Parakeet model download so on-device transcription works out of the box.
+    private func promptForModelDownloadIfNeeded() {
+        let defaults = UserDefaults.standard
+        guard !defaults.bool(forKey: Self.promptedModelDownloadKey) else { return }
+
+        Task { @MainActor in
+            let isInstalled = await ModelStore.shared.isParakeetModelInstalled()
+            guard !isInstalled else { return }
+
+            defaults.set(true, forKey: Self.promptedModelDownloadKey)
+
+            let alert = NSAlert()
+            alert.messageText = "Download the Speech Model"
+            alert.informativeText = """
+            VoiceFlow uses the on-device Parakeet TDT 0.6B v3 model (25 languages, ~480 MB) \
+            for fast, private transcription.
+
+            The model is downloaded directly from Hugging Face \
+            (FluidInference/parakeet-tdt-0.6b-v3-coreml) over HTTPS. Nothing you say ever \
+            leaves your Mac.
+            """
+            alert.addButton(withTitle: "Download Now")
+            alert.addButton(withTitle: "Later")
+            alert.alertStyle = .informational
+
+            NSApp.activate(ignoringOtherApps: true)
+            if alert.runModal() == .alertFirstButtonReturn {
+                self.showSettings()
+                NotificationCenter.default.post(name: .showModelDownload, object: nil)
+            }
+        }
     }
     
     func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {

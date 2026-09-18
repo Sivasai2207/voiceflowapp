@@ -17,7 +17,12 @@ public final class SpeechPolishingService: Sendable {
     ) -> String {
         var text = transcript.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !text.isEmpty else { return "" }
-        
+
+        // Words the user added to their reference dictionary must never be "corrected"
+        // by the spell checker, otherwise a custom/technical term gets rewritten into a
+        // random common word before the dictionary pass can normalize it.
+        let protectedWords = protectedWordSet(from: dictionaryEntries)
+
         // 1. Remove spoken disfluencies (fillers: um, uh, ah, etc.)
         text = removeFillerWords(text)
         
@@ -33,8 +38,8 @@ public final class SpeechPolishingService: Sendable {
         // 5. Clean up whitespace and punctuation spacing
         text = cleanSpacingAndPunctuation(text)
         
-        // 6. Spellcheck & typo correction
-        text = correctSpellingAndGrammar(text)
+        // 6. Spellcheck & typo correction (skipping the user's protected reference words)
+        text = correctSpellingAndGrammar(text, protectedWords: protectedWords)
         
         // 7. Capitalization (sentence start, "I", acronyms)
         text = applySmartCapitalization(text)
@@ -60,16 +65,40 @@ public final class SpeechPolishingService: Sendable {
     }
 
     private func referenceWordPattern(for word: String) -> String {
+        let flexibleSpacing = referenceWordComponents(for: word)
+            .map { NSRegularExpression.escapedPattern(for: $0) }
+            .joined(separator: "\\s*")
+        return "(?i)(?<![\\p{L}\\p{N}])\(flexibleSpacing)(?![\\p{L}\\p{N}])"
+    }
+
+    /// Splits a reference word into its constituent tokens, breaking camelCase
+    /// boundaries (e.g. "VoiceFlow" -> ["Voice", "Flow"]) and whitespace.
+    private func referenceWordComponents(for word: String) -> [String] {
         let separatedWords = word.replacingOccurrences(
             of: "([a-z])([A-Z])",
             with: "$1 $2",
             options: .regularExpression
         )
-        let escapedComponents = separatedWords
+        return separatedWords
             .split(whereSeparator: { $0.isWhitespace })
-            .map { NSRegularExpression.escapedPattern(for: String($0)) }
-        let flexibleSpacing = escapedComponents.joined(separator: "\\s*")
-        return "(?i)(?<![\\p{L}\\p{N}])\(flexibleSpacing)(?![\\p{L}\\p{N}])"
+            .map(String.init)
+    }
+
+    /// Lowercased set of every reference word and its components, used to shield
+    /// custom terms from the spell checker.
+    private func protectedWordSet(from entries: [DictionaryEntry]) -> Set<String> {
+        var set = Set<String>()
+        for entry in entries {
+            let cleaned = entry.word.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !cleaned.isEmpty else { continue }
+            // Whole term with spaces removed (e.g. "voiceflow") and the raw term.
+            set.insert(cleaned.lowercased())
+            set.insert(cleaned.replacingOccurrences(of: " ", with: "").lowercased())
+            for component in referenceWordComponents(for: cleaned) {
+                set.insert(component.lowercased())
+            }
+        }
+        return set
     }
     
     // MARK: - 1. Filler Word Removal
@@ -196,43 +225,45 @@ public final class SpeechPolishingService: Sendable {
     }
     
     // MARK: - 6. Spell Check and Typo Correction
-    private func correctSpellingAndGrammar(_ text: String) -> String {
+    private func correctSpellingAndGrammar(_ text: String, protectedWords: Set<String> = []) -> String {
         guard !text.isEmpty else { return text }
-        
+
         // Use NSSpellChecker for light spelling fix
         let spellChecker = NSSpellChecker.shared
-        
+
         // Check spelling for words
         var result = text
         var searchLocation = 0
-        
+
         while searchLocation < result.utf16.count {
             let subRange = NSRange(location: searchLocation, length: result.utf16.count - searchLocation)
             let misspellingRange = spellChecker.checkSpelling(of: result, startingAt: subRange.location)
-            
+
             if misspellingRange.location == NSNotFound || misspellingRange.location >= result.utf16.count {
                 break
             }
-            
+
             // Check if there is a high-confidence correction
             if let guesses = spellChecker.guesses(forWordRange: misspellingRange, in: result, language: nil, inSpellDocumentWithTag: 0),
                let firstGuess = guesses.first,
                guesses.count <= 3 { // High confidence when options are constrained
-                
+
                 if let swiftRange = Range(misspellingRange, in: result) {
                     let misspelledWord = String(result[swiftRange])
+                    // Never rewrite a word the user has in their reference dictionary.
+                    let isProtected = protectedWords.contains(misspelledWord.lowercased())
                     // Only replace if length is similar and not capitalized proper noun
-                    if abs(misspelledWord.count - firstGuess.count) <= 2 && misspelledWord != misspelledWord.capitalized {
+                    if !isProtected && abs(misspelledWord.count - firstGuess.count) <= 2 && misspelledWord != misspelledWord.capitalized {
                         result.replaceSubrange(swiftRange, with: firstGuess)
                         searchLocation = misspellingRange.location + firstGuess.utf16.count
                         continue
                     }
                 }
             }
-            
+
             searchLocation = misspellingRange.location + misspellingRange.length
         }
-        
+
         return result
     }
     

@@ -150,6 +150,10 @@ struct SettingsView: View {
         .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in
             refreshPermissions()
         }
+        .onReceive(NotificationCenter.default.publisher(for: .showModelDownload).receive(on: RunLoop.main)) { _ in
+            selectedSection = .transcription
+            showingModelDownload = true
+        }
         .onReceive(NotificationCenter.default.publisher(for: .microphoneTestLevelDidChange).receive(on: RunLoop.main)) { notification in
             guard let level = notification.userInfo?["level"] as? Float else { return }
             testAudioLevel = level
@@ -960,6 +964,9 @@ struct SettingsView: View {
                                     PermissionService.shared.openMicrophoneSettings()
                                 }
                                 refreshPermissions()
+                                // Granting microphone access resigns and can hide our window;
+                                // bring Settings back to the front so the flow isn't interrupted.
+                                AppDelegate.shared?.showSettings()
                             }
                         }
                     )
@@ -1181,6 +1188,7 @@ struct SettingsView: View {
 
 extension Notification.Name {
     static let microphoneTestLevelDidChange = Notification.Name("VoiceFlowApp.microphoneTestLevelDidChange")
+    static let showModelDownload = Notification.Name("VoiceFlowApp.showModelDownload")
 }
 
 // MARK: - Modern UI Component Helpers
