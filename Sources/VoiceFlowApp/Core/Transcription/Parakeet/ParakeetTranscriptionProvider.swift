@@ -96,9 +96,13 @@ final class ParakeetTranscriptionProvider: TranscriptionProvider {
             channelData.initialize(from: self.audioBuffer, count: audioBuffer.count)
         }
         
-        let asrResult = try await Task { @MainActor in
-            try await manager.transcribe(buffer, source: .system)
-        }.value
+        // `AsrManager.transcribe` is a @concurrent method, so it runs off the main
+        // actor. `buffer` is freshly built above and not used afterwards, and the
+        // manager is designed to be driven from a single caller, so handing them
+        // across the isolation boundary here is safe.
+        nonisolated(unsafe) let sendableBuffer = buffer
+        nonisolated(unsafe) let sendableManager = manager
+        let asrResult = try await sendableManager.transcribe(sendableBuffer, source: .system)
         
         audioBuffer.removeAll(keepingCapacity: false)
         

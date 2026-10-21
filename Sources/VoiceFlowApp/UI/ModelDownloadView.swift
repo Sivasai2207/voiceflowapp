@@ -30,6 +30,16 @@ struct ModelDownloadView: View {
                 Text("Parakeet TDT 0.6B v3 — 25 languages, ~480 MB installed")
                     .font(.callout)
                     .foregroundStyle(.secondary)
+
+                Link(destination: URL(string: "https://huggingface.co/FluidInference/parakeet-tdt-0.6b-v3-coreml")!) {
+                    HStack(spacing: 4) {
+                        Image(systemName: "shippingbox")
+                        Text("Source: Hugging Face · FluidInference/parakeet-tdt-0.6b-v3-coreml")
+                        Image(systemName: "arrow.up.right")
+                    }
+                    .font(.caption)
+                }
+                .help("The model is downloaded directly from Hugging Face over HTTPS. Nothing is sent to VoiceFlow.")
             }
             
             switch downloadState {

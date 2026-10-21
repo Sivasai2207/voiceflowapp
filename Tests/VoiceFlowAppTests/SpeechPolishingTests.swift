@@ -64,4 +64,18 @@ final class SpeechPolishingTests: XCTestCase {
 
         XCTAssertEqual(output, "VoiceFlow will review the database and data")
     }
+
+    func testReferenceLibraryShieldsCustomTermFromSpellChecker() {
+        // A lowercase technical term the system spell checker would otherwise "correct"
+        // into a random common word must survive when it is in the reference library.
+        let entries = [DictionaryEntry(word: "kubectl")]
+
+        let output = SpeechPolishingService.shared.polish(
+            transcript: "please run kubectl now",
+            autoPunctuation: false,
+            dictionaryEntries: entries
+        )
+
+        XCTAssertTrue(output.contains("kubectl"), "Expected custom term to be preserved, got: \(output)")
+    }
 }
